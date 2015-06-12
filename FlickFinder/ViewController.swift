@@ -8,13 +8,12 @@
 
 import UIKit
 
-class ViewController: UIViewController {
+class ViewController: UIViewController, UITextFieldDelegate {
 
-  @IBOutlet weak var titleOne: UILabel!
-  @IBOutlet weak var titleTwo: UILabel!
+
   @IBOutlet weak var defaultTitle: UILabel!
   @IBOutlet weak var imagePlaceholder: UIImageView!
-  @IBOutlet weak var titlePlaceholder: UILabel!
+  @IBOutlet weak var titlePlaceholder: UITextView!
   @IBOutlet weak var searchTextField: UITextField!
   @IBOutlet weak var searchLatField: UITextField!
   @IBOutlet weak var searchLongField: UITextField!
@@ -26,15 +25,30 @@ class ViewController: UIViewController {
   let METHOD_NAME = "flickr.photos.search"
   let API_KEY = "aed5bae79e7824cc4a13e45c49163a88"
   let EXTRAS = "url_m"
-  let TEXT = "screugnen+asian+elephant"
+  let TEXT = "baby+asian+elephant"
   let DATA_FORMAT = "json"
   let NO_JSON_CALLBACK = "1"
   
   override func viewDidLoad() {
     super.viewDidLoad()
     //Do any additional setup after loading the view, typically from a nib.
+    self.searchTextField.delegate = self
+    self.searchLatField.delegate = self
+    self.searchLongField.delegate = self
+  }
+  override func viewWillAppear(animated: Bool) {
+    super.viewWillAppear(animated)
+    
+    //subscribe to keyboard notifications
+    self.subscribeToKeyboardNotifications()
   }
   
+  override func viewWillDisappear(animated: Bool) {
+    super.viewWillDisappear(animated)
+    
+    //unsubscribe from keyboard notifications
+    self.unsubscribeFromKeyboardNotifications()
+  }
 
   func getSearchedImage(){
     //API method arguments
@@ -134,7 +148,50 @@ class ViewController: UIViewController {
     }
     return (!urlVars.isEmpty ? "?" : "") + join("&", urlVars)
   }
-
+  
+  //MARK: UITextFieldsDataSource
+  
+  //allow return interaction with text fields
+  func textFieldShouldReturn(textField: UITextField) -> Bool {
+    self.view.endEditing(true)
+    return false
+  }
+  
+  //MARK: Keyboard Notifications
+  
+  //functions to get notification about keyboard appeareance/disappearence
+  func subscribeToKeyboardNotifications() {
+    NSNotificationCenter.defaultCenter().addObserver(self, selector: "keyboardWillShow:"    , name: UIKeyboardWillShowNotification, object: nil)
+    NSNotificationCenter.defaultCenter().addObserver(self, selector: "keyboardWillHide:", name: UIKeyboardWillHideNotification, object: nil)
+  }
+  
+  func unsubscribeFromKeyboardNotifications() {
+    NSNotificationCenter.defaultCenter().removeObserver(self, name:
+      UIKeyboardWillShowNotification, object: nil)
+    NSNotificationCenter.defaultCenter().removeObserver(self, name:
+      UIKeyboardWillHideNotification, object: nil)
+  }
+  
+  //move frame up the keyboard when it appeared
+  func keyboardWillShow(notification: NSNotification) {
+    self.view.frame.origin.y -= getKeyboardHeight(notification)
+  }
+  
+  //replace the frame after the keyboard is hidden
+  func keyboardWillHide(notification: NSNotification) {
+    self.view.frame.origin.y += getKeyboardHeight(notification)
+  }
+  
+  //get the keyboard height
+  func getKeyboardHeight(notification: NSNotification) -> CGFloat {
+    let userInfo = notification.userInfo
+    let keyboardSize = userInfo![UIKeyboardFrameEndUserInfoKey] as! NSValue // of CGRect
+    return keyboardSize.CGRectValue().height
+  }
+  
+  
+  //MARK: Search buttion IBActions
+  
   @IBAction func searchPhotosByPhraseButton(sender: AnyObject) {
     getSearchedImage()
   }
